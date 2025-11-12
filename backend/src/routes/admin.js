@@ -337,4 +337,153 @@ router.get('/general-feedback-report', auth('admin'), async (req, res) => {
   }
 });
 
+// Get faculty-centric report with batch breakdown
+router.get('/faculty-batch-report', auth('admin'), async (req, res) => {
+  try {
+    const { course, semester } = req.query;
+    
+    if (!course) {
+      return res.status(400).json({ message: 'Course is required' });
+    }
+
+    // Build subject query
+    const subjectQuery = {
+      course: course.toUpperCase()
+    };
+
+    if (semester) {
+      subjectQuery.semesterOptions = semester.toString();
+    }
+
+    // Get all subjects for the given filters and populate faculties
+    const subjects = await Subject.find(subjectQuery).populate('faculties');
+    
+    // Extract unique faculties
+    const facultyMap = new Map();
+    subjects.forEach(subject => {
+      subject.faculties.forEach(faculty => {
+        if (!facultyMap.has(faculty._id.toString())) {
+          facultyMap.set(faculty._id.toString(), {
+            _id: faculty._id,
+            name: faculty.name,
+            email: faculty.email,
+            department: faculty.department,
+            batches: []
+          });
+        }
+      });
+    });
+
+    // For each faculty, get batch-wise feedback statistics
+    const facultyReports = [];
+    
+    for (const [facultyId, facultyInfo] of facultyMap) {
+      // Get all feedbacks for this faculty
+      const feedbacks = await Feedback.find({
+        faculty: facultyId,
+        feedbackType: 'semester',
+        notApplicable: false
+      }).populate('student');
+
+      // Filter by course and optionally semester
+      let relevantFeedbacks = feedbacks.filter(fb => {
+        return fb.student && fb.student.course === course.toUpperCase();
+      });
+
+      if (semester) {
+        relevantFeedbacks = relevantFeedbacks.filter(fb => fb.semester === Number(semester));
+      }
+
+      // Group by batch
+      const batchMap = new Map();
+      
+      relevantFeedbacks.forEach(fb => {
+        const batch = fb.student.batch;
+        
+        if (!batchMap.has(batch)) {
+          batchMap.set(batch, {
+            batch: batch,
+            students: new Set(),
+            ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            totalRatings: 0
+          });
+        }
+        
+        const batchData = batchMap.get(batch);
+        batchData.students.add(fb.student._id.toString());
+        
+        // Count ratings
+        if (fb.answers && fb.answers.length > 0) {
+          fb.answers.forEach(answer => {
+            if (answer.rating >= 1 && answer.rating <= 4) {
+              batchData.ratingCounts[answer.rating]++;
+              batchData.totalRatings++;
+            }
+          });
+        }
+      });
+
+      // Calculate percentages for each batch
+      const batchReports = [];
+      for (const [batch, data] of batchMap) {
+        // Get total students in this batch
+        const totalStudentsInBatch = await Student.countDocuments({ 
+          batch: batch, 
+          course: course.toUpperCase() 
+        });
+
+        const ratingPercentages = {};
+        Object.keys(data.ratingCounts).forEach(rating => {
+          ratingPercentages[rating] = data.totalRatings > 0 
+            ? ((data.ratingCounts[rating] / data.totalRatings) * 100).toFixed(2) 
+            : '0.00';
+        });
+
+        // Calculate average score
+        let totalScore = 0;
+        Object.keys(data.ratingCounts).forEach(rating => {
+          totalScore += parseInt(rating) * data.ratingCounts[rating];
+        });
+        const averageRating = data.totalRatings > 0 ? totalScore / data.totalRatings : 0;
+        const averagePercentage = ((averageRating / 4) * 100).toFixed(2);
+
+        batchReports.push({
+          batch: batch,
+          totalStudents: totalStudentsInBatch,
+          studentsFilledCount: data.students.size,
+          studentsFilledPercentage: totalStudentsInBatch > 0 
+            ? ((data.students.size / totalStudentsInBatch) * 100).toFixed(2)
+            : '0.00',
+          ratingCounts: data.ratingCounts,
+          ratingPercentages: ratingPercentages,
+          totalRatings: data.totalRatings,
+          averageRating: averageRating.toFixed(2),
+          averagePercentage: averagePercentage
+        });
+      }
+
+      // Sort batches
+      batchReports.sort((a, b) => b.batch - a.batch);
+
+      if (batchReports.length > 0) {
+        facultyReports.push({
+          facultyId: facultyInfo._id,
+          facultyName: facultyInfo.name,
+          email: facultyInfo.email,
+          department: facultyInfo.department,
+          batches: batchReports
+        });
+      }
+    }
+
+    // Sort faculties by name
+    facultyReports.sort((a, b) => a.facultyName.localeCompare(b.facultyName));
+
+    res.json({ faculties: facultyReports });
+  } catch (err) {
+    console.error('Error fetching faculty-batch report:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

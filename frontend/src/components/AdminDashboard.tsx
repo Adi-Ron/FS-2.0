@@ -46,6 +46,26 @@ interface FacultyReport {
   totalRatings: number;
 }
 
+interface BatchReport {
+  batch: number;
+  totalStudents: number;
+  studentsFilledCount: number;
+  studentsFilledPercentage: string;
+  ratingCounts: { [key: string]: number };
+  ratingPercentages: { [key: string]: string };
+  totalRatings: number;
+  averageRating: string;
+  averagePercentage: string;
+}
+
+interface FacultyBatchReport {
+  facultyId: string;
+  facultyName: string;
+  email: string;
+  department: string;
+  batches: BatchReport[];
+}
+
 interface StudentReportItem {
   studentId: string;
   name: string;
@@ -86,6 +106,14 @@ const AdminDashboard: React.FC = () => {
   const [availableFaculties, setAvailableFaculties] = useState<any[]>([]);
   const [facultyReport, setFacultyReport] = useState<FacultyReport | null>(null);
   const [loadingFacultyReport, setLoadingFacultyReport] = useState(false);
+  
+  // Faculty-Centric Report State
+  const [viewMode, setViewMode] = useState<'semester' | 'faculty'>('semester');
+  const [facultyCentricCourse, setFacultyCentricCourse] = useState<string>('');
+  const [facultyCentricSemester, setFacultyCentricSemester] = useState<string>('');
+  const [facultyBatchReports, setFacultyBatchReports] = useState<FacultyBatchReport[]>([]);
+  const [loadingFacultyBatchReport, setLoadingFacultyBatchReport] = useState(false);
+  const [expandedFaculty, setExpandedFaculty] = useState<string | false>(false);
 
   // Student Report State
   const [studentBatch, setStudentBatch] = useState<string>('');
@@ -164,6 +192,30 @@ const AdminDashboard: React.FC = () => {
       alert('Failed to load faculty report');
     } finally {
       setLoadingFacultyReport(false);
+    }
+  };
+
+  const loadFacultyBatchReport = async () => {
+    if (!facultyCentricCourse) {
+      alert('Please select course');
+      return;
+    }
+
+    try {
+      setLoadingFacultyBatchReport(true);
+      const params: any = {
+        course: facultyCentricCourse,
+      };
+      if (facultyCentricSemester) {
+        params.semester = Number(facultyCentricSemester);
+      }
+      const response = await admin.getFacultyBatchReport(params);
+      setFacultyBatchReports(response.data.faculties);
+    } catch (error) {
+      console.error('Failed to load faculty-batch report:', error);
+      alert('Failed to load faculty-batch report');
+    } finally {
+      setLoadingFacultyBatchReport(false);
     }
   };
 
@@ -405,170 +457,352 @@ const AdminDashboard: React.FC = () => {
             {/* Faculty Report Panel */}
             {reportTab === 0 && (
               <Box>
-                <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Faculty Report Filters
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        fullWidth
-                        label="Batch"
-                        type="number"
-                        value={facultyBatch}
-                        onChange={(e) => setFacultyBatch(e.target.value)}
-                        placeholder="e.g., 2024"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth>
-                        <InputLabel>Course</InputLabel>
-                        <Select
-                          value={facultyCourse}
-                          label="Course"
-                          onChange={(e) => setFacultyCourse(e.target.value)}
-                        >
-                          <MenuItem value="CSE">CSE</MenuItem>
-                          <MenuItem value="ECE">ECE</MenuItem>
-                          <MenuItem value="AIML">AIML</MenuItem>
-                          <MenuItem value="M.TECH (CSE)">M.TECH (CSE)</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth>
-                        <InputLabel>Semester (Optional)</InputLabel>
-                        <Select
-                          value={facultySemester}
-                          label="Semester (Optional)"
-                          onChange={(e) => setFacultySemester(e.target.value)}
-                        >
-                          <MenuItem value="">All Semesters</MenuItem>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                            <MenuItem key={sem} value={sem.toString()}>
-                              Semester {sem}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <FormControl fullWidth>
-                        <InputLabel>Faculty (Optional)</InputLabel>
-                        <Select
-                          value={selectedFacultyId}
-                          label="Faculty (Optional)"
-                          onChange={(e) => setSelectedFacultyId(e.target.value)}
-                          disabled={availableFaculties.length === 0}
-                        >
-                          <MenuItem value="">All Faculties</MenuItem>
-                          {availableFaculties.map((faculty) => (
-                            <MenuItem key={faculty._id} value={faculty._id}>
-                              {faculty.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={12}>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        color="primary"
-                        onClick={loadFacultyReport}
-                        disabled={loadingFacultyReport}
-                        sx={{ height: '56px' }}
-                      >
-                        {loadingFacultyReport ? 'Loading...' : 'Generate Report'}
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </Paper>
+                {/* View Mode Toggle */}
+                <Box sx={{ mb: 3, display: 'flex', gap: 1 }}>
+                  <Button
+                    variant={viewMode === 'semester' ? 'contained' : 'outlined'}
+                    onClick={() => setViewMode('semester')}
+                  >
+                    Semester View
+                  </Button>
+                  <Button
+                    variant={viewMode === 'faculty' ? 'contained' : 'outlined'}
+                    onClick={() => setViewMode('faculty')}
+                  >
+                    Faculty-Centric View
+                  </Button>
+                </Box>
 
-                {facultyReport && (
-                  <Paper elevation={1} sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Box>
-                        <Typography variant="h6">Faculty Report Results</Typography>
-                        {selectedFacultyId && (
-                          <Typography variant="body2" color="textSecondary">
-                            Faculty: {availableFaculties.find(f => f._id === selectedFacultyId)?.name || 'Unknown'}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={downloadFacultyReportPDF}
-                      >
-                        Download PDF
-                      </Button>
-                    </Box>
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={12} md={3}>
-                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Total Students in Batch
-                          </Typography>
-                          <Typography variant="h4">{facultyReport.totalStudents}</Typography>
-                        </Paper>
+                {/* Semester View */}
+                {viewMode === 'semester' && (
+                  <>
+                    <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Faculty Report Filters
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            fullWidth
+                            label="Batch"
+                            type="number"
+                            value={facultyBatch}
+                            onChange={(e) => setFacultyBatch(e.target.value)}
+                            placeholder="e.g., 2024"
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <FormControl fullWidth>
+                            <InputLabel>Course</InputLabel>
+                            <Select
+                              value={facultyCourse}
+                              label="Course"
+                              onChange={(e) => setFacultyCourse(e.target.value)}
+                            >
+                              <MenuItem value="CSE">CSE</MenuItem>
+                              <MenuItem value="ECE">ECE</MenuItem>
+                              <MenuItem value="AIML">AIML</MenuItem>
+                              <MenuItem value="M.TECH (CSE)">M.TECH (CSE)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <FormControl fullWidth>
+                            <InputLabel>Semester (Optional)</InputLabel>
+                            <Select
+                              value={facultySemester}
+                              label="Semester (Optional)"
+                              onChange={(e) => setFacultySemester(e.target.value)}
+                            >
+                              <MenuItem value="">All Semesters</MenuItem>
+                              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                                <MenuItem key={sem} value={sem.toString()}>
+                                  Semester {sem}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <FormControl fullWidth>
+                            <InputLabel>Faculty (Optional)</InputLabel>
+                            <Select
+                              value={selectedFacultyId}
+                              label="Faculty (Optional)"
+                              onChange={(e) => setSelectedFacultyId(e.target.value)}
+                              disabled={availableFaculties.length === 0}
+                            >
+                              <MenuItem value="">All Faculties</MenuItem>
+                              {availableFaculties.map((faculty) => (
+                                <MenuItem key={faculty._id} value={faculty._id}>
+                                  {faculty.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={12}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            color="primary"
+                            onClick={loadFacultyReport}
+                            disabled={loadingFacultyReport}
+                            sx={{ height: '56px' }}
+                          >
+                            {loadingFacultyReport ? 'Loading...' : 'Generate Report'}
+                          </Button>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Students Filled Form
-                          </Typography>
-                          <Typography variant="h4">
-                            {facultyReport.studentsFilledCount}
-                          </Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Paper sx={{ p: 2, bgcolor: '#e8f5e9' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Average Score
-                          </Typography>
-                          <Typography variant="h4">
-                            {facultyReport.averagePercentage}%
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {facultyReport.averageRating}/4
-                          </Typography>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={12} md={3}>
-                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Total Ratings
-                          </Typography>
-                          <Typography variant="h4">{facultyReport.totalRatings}</Typography>
-                        </Paper>
-                      </Grid>
-                    </Grid>
+                    </Paper>
 
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Rating</TableCell>
-                            <TableCell align="right">Count</TableCell>
-                            <TableCell align="right">Percentage</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {[1, 2, 3, 4].map((rating) => (
-                            <TableRow key={rating}>
-                              <TableCell>
-                                {rating} - {rating === 1 ? 'Disagree' : rating === 2 ? 'Partially Agree' : rating === 3 ? 'Agree' : 'Strongly Agree'}
-                              </TableCell>
-                              <TableCell align="right">{facultyReport.ratingCounts[rating.toString()]}</TableCell>
-                              <TableCell align="right">{facultyReport.ratingPercentages[rating.toString()]}%</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Paper>
+                    {facultyReport && (
+                      <Paper elevation={1} sx={{ p: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                          <Box>
+                            <Typography variant="h6">Faculty Report Results</Typography>
+                            {selectedFacultyId && (
+                              <Typography variant="body2" color="textSecondary">
+                                Faculty: {availableFaculties.find(f => f._id === selectedFacultyId)?.name || 'Unknown'}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={downloadFacultyReportPDF}
+                          >
+                            Download PDF
+                          </Button>
+                        </Box>
+                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                          <Grid item xs={12} md={3}>
+                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                              <Typography variant="subtitle2" color="textSecondary">
+                                Total Students in Batch
+                              </Typography>
+                              <Typography variant="h4">{facultyReport.totalStudents}</Typography>
+                            </Paper>
+                          </Grid>
+                          <Grid item xs={12} md={3}>
+                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                              <Typography variant="subtitle2" color="textSecondary">
+                                Students Filled Form
+                              </Typography>
+                              <Typography variant="h4">
+                                {facultyReport.studentsFilledCount}
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                          <Grid item xs={12} md={3}>
+                            <Paper sx={{ p: 2, bgcolor: '#e8f5e9' }}>
+                              <Typography variant="subtitle2" color="textSecondary">
+                                Average Score
+                              </Typography>
+                              <Typography variant="h4">
+                                {facultyReport.averagePercentage}%
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                {facultyReport.averageRating}/4
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                          <Grid item xs={12} md={3}>
+                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                              <Typography variant="subtitle2" color="textSecondary">
+                                Total Ratings
+                              </Typography>
+                              <Typography variant="h4">{facultyReport.totalRatings}</Typography>
+                            </Paper>
+                          </Grid>
+                        </Grid>
+
+                        <TableContainer>
+                          <Table>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Rating</TableCell>
+                                <TableCell align="right">Count</TableCell>
+                                <TableCell align="right">Percentage</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {[1, 2, 3, 4].map((rating) => (
+                                <TableRow key={rating}>
+                                  <TableCell>
+                                    {rating} - {rating === 1 ? 'Disagree' : rating === 2 ? 'Partially Agree' : rating === 3 ? 'Agree' : 'Strongly Agree'}
+                                  </TableCell>
+                                  <TableCell align="right">{facultyReport.ratingCounts[rating.toString()]}</TableCell>
+                                  <TableCell align="right">{facultyReport.ratingPercentages[rating.toString()]}%</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    )}
+                  </>
+                )}
+
+                {/* Faculty-Centric View */}
+                {viewMode === 'faculty' && (
+                  <>
+                    <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Faculty-Centric Report Filters
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth>
+                            <InputLabel>Course</InputLabel>
+                            <Select
+                              value={facultyCentricCourse}
+                              label="Course"
+                              onChange={(e) => setFacultyCentricCourse(e.target.value)}
+                            >
+                              <MenuItem value="CSE">CSE</MenuItem>
+                              <MenuItem value="ECE">ECE</MenuItem>
+                              <MenuItem value="AIML">AIML</MenuItem>
+                              <MenuItem value="M.TECH (CSE)">M.TECH (CSE)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth>
+                            <InputLabel>Semester (Optional)</InputLabel>
+                            <Select
+                              value={facultyCentricSemester}
+                              label="Semester (Optional)"
+                              onChange={(e) => setFacultyCentricSemester(e.target.value)}
+                            >
+                              <MenuItem value="">All Semesters</MenuItem>
+                              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                                <MenuItem key={sem} value={sem.toString()}>
+                                  Semester {sem}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            color="primary"
+                            onClick={loadFacultyBatchReport}
+                            disabled={loadingFacultyBatchReport}
+                            sx={{ height: '56px' }}
+                          >
+                            {loadingFacultyBatchReport ? 'Loading...' : 'Generate Faculty-Centric Report'}
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+
+                    {facultyBatchReports.length > 0 && (
+                      <Paper elevation={1} sx={{ p: 3 }}>
+                        <Typography variant="h6" gutterBottom>
+                          Faculty Reports ({facultyBatchReports.length} Faculties)
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                          Click on each faculty to see batch-wise breakdown
+                        </Typography>
+                        
+                        {facultyBatchReports.map((facultyReport) => (
+                          <Accordion 
+                            key={facultyReport.facultyId}
+                            expanded={expandedFaculty === facultyReport.facultyId}
+                            onChange={() => setExpandedFaculty(
+                              expandedFaculty === facultyReport.facultyId ? false : facultyReport.facultyId
+                            )}
+                            sx={{ mb: 2 }}
+                          >
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6">{facultyReport.facultyName}</Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                  {facultyReport.email} | {facultyReport.batches.length} Batch(es)
+                                </Typography>
+                              </Box>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                              {facultyReport.batches.map((batchData) => (
+                                <Paper key={batchData.batch} sx={{ p: 2, mb: 2, bgcolor: '#f9f9f9' }}>
+                                  <Typography variant="h6" gutterBottom>
+                                    Batch {batchData.batch}
+                                  </Typography>
+                                  
+                                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                                    <Grid item xs={6} md={3}>
+                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
+                                        <Typography variant="caption" color="textSecondary">
+                                          Total Students
+                                        </Typography>
+                                        <Typography variant="h5">{batchData.totalStudents}</Typography>
+                                      </Paper>
+                                    </Grid>
+                                    <Grid item xs={6} md={3}>
+                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
+                                        <Typography variant="caption" color="textSecondary">
+                                          Students Filled
+                                        </Typography>
+                                        <Typography variant="h5">{batchData.studentsFilledCount}</Typography>
+                                        <Typography variant="caption">
+                                          ({batchData.studentsFilledPercentage}%)
+                                        </Typography>
+                                      </Paper>
+                                    </Grid>
+                                    <Grid item xs={6} md={3}>
+                                      <Paper sx={{ p: 1.5, bgcolor: '#e8f5e9' }}>
+                                        <Typography variant="caption" color="textSecondary">
+                                          Average Score
+                                        </Typography>
+                                        <Typography variant="h5">{batchData.averagePercentage}%</Typography>
+                                        <Typography variant="caption">
+                                          {batchData.averageRating}/4
+                                        </Typography>
+                                      </Paper>
+                                    </Grid>
+                                    <Grid item xs={6} md={3}>
+                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
+                                        <Typography variant="caption" color="textSecondary">
+                                          Total Ratings
+                                        </Typography>
+                                        <Typography variant="h5">{batchData.totalRatings}</Typography>
+                                      </Paper>
+                                    </Grid>
+                                  </Grid>
+
+                                  <TableContainer>
+                                    <Table size="small">
+                                      <TableHead>
+                                        <TableRow>
+                                          <TableCell>Rating</TableCell>
+                                          <TableCell align="right">Count</TableCell>
+                                          <TableCell align="right">Percentage</TableCell>
+                                        </TableRow>
+                                      </TableHead>
+                                      <TableBody>
+                                        {[1, 2, 3, 4].map((rating) => (
+                                          <TableRow key={rating}>
+                                            <TableCell>
+                                              {rating} - {rating === 1 ? 'Disagree' : rating === 2 ? 'Partially Agree' : rating === 3 ? 'Agree' : 'Strongly Agree'}
+                                            </TableCell>
+                                            <TableCell align="right">{batchData.ratingCounts[rating.toString()]}</TableCell>
+                                            <TableCell align="right">{batchData.ratingPercentages[rating.toString()]}%</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </Paper>
+                              ))}
+                            </AccordionDetails>
+                          </Accordion>
+                        ))}
+                      </Paper>
+                    )}
+                  </>
                 )}
               </Box>
             )}

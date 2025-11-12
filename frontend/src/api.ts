@@ -72,6 +72,8 @@ export const admin = {
     api.get('/api/admin/faculties', { params }),
   getFacultyReport: (params: { batch: number; course: string; semester?: number; facultyId?: string }) => 
     api.get('/api/admin/faculty-report', { params }),
+  getFacultyBatchReport: (params: { course: string; semester?: number }) =>
+    api.get('/api/admin/faculty-batch-report', { params }),
   getStudentReport: (params: { batch: number; course: string }) => 
     api.get('/api/admin/student-report', { params }),
   getGeneralFeedbackReport: (params: { batch: number; course: string }) =>
