@@ -75,19 +75,25 @@ const DataImport: React.FC = () => {
         const formData = new FormData();
         formData.append('file', selectedFile);
         const response = await admin.getSheetNames(formData);
-        const sheets = response.data.sheetNames || [];
-        setSheetNames(sheets);
-        
+
+        // Accept multiple possible response shapes for backward compatibility
+        const sheets = response.data?.sheetNames || response.data?.sheets || response.data?.sheetsList || [];
+        console.debug('Sheets response:', response.data);
+        setSheetNames(Array.isArray(sheets) ? sheets : []);
+
         // Auto-select first sheet
-        if (sheets.length > 0) {
+        if (Array.isArray(sheets) && sheets.length > 0) {
           setSelectedSheet(sheets[0]);
           // Try to auto-detect batch and course from sheet name
           if (autoDetect) {
             autoDetectBatchAndCourse(sheets[0]);
           }
+        } else {
+          setMessage({ type: 'error', text: 'No sheets found in the selected file or server returned unexpected response.' });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading sheets:', error);
+        setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to load sheets from file' });
       } finally {
         setLoadingSheets(false);
       }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Box, Typography, TextField, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { feedback as feedbackApi } from '../api';
 
@@ -40,9 +40,21 @@ const GeneralFeedbackForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [suggestions, setSuggestions] = useState({ admin: '', welfare: '', other: '' });
 
-  const handleRating = (qid: number, val: number) => {
+  const handleRating = useCallback((qid: number, val: number) => {
     setAnswers(prev => ({ ...prev, [qid]: val }));
-  };
+  }, []);
+
+  const handleSuggestionChange = useCallback((field: 'admin' | 'welfare' | 'other', value: string) => {
+    const wordCount = value.trim().split(/\s+/).filter(word => word.length > 0).length;
+    if (wordCount <= 100 || value.length < (suggestions[field]?.length || 0)) {
+      setSuggestions(prev => ({ ...prev, [field]: value }));
+    }
+  }, [suggestions]);
+
+  const getWordCount = useCallback((text: string) => {
+    if (!text || text.trim().length === 0) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }, []);
 
   const handleSubmit = async () => {
     // validate all answered
@@ -89,9 +101,36 @@ const GeneralFeedbackForm: React.FC<{ onComplete: () => void }> = ({ onComplete 
       ))}
 
       <Box sx={{ mt: 2 }}>
-        <TextField fullWidth multiline rows={2} label="Suggestions for improving administrative processes" value={suggestions.admin} onChange={e => setSuggestions(prev => ({ ...prev, admin: e.target.value }))} sx={{ mb: 1 }} />
-        <TextField fullWidth multiline rows={2} label="Suggestions for improving student welfare and campus life" value={suggestions.welfare} onChange={e => setSuggestions(prev => ({ ...prev, welfare: e.target.value }))} sx={{ mb: 1 }} />
-        <TextField fullWidth multiline rows={2} label="Any other comments or observations" value={suggestions.other} onChange={e => setSuggestions(prev => ({ ...prev, other: e.target.value }))} sx={{ mb: 1 }} />
+        <TextField 
+          fullWidth 
+          multiline 
+          rows={3} 
+          label="Suggestions for improving administrative processes (Max 100 words)" 
+          value={suggestions.admin} 
+          onChange={e => handleSuggestionChange('admin', e.target.value)}
+          helperText={`${getWordCount(suggestions.admin)}/100 words`}
+          sx={{ mb: 2 }} 
+        />
+        <TextField 
+          fullWidth 
+          multiline 
+          rows={3} 
+          label="Suggestions for improving student welfare and campus life (Max 100 words)" 
+          value={suggestions.welfare} 
+          onChange={e => handleSuggestionChange('welfare', e.target.value)}
+          helperText={`${getWordCount(suggestions.welfare)}/100 words`}
+          sx={{ mb: 2 }} 
+        />
+        <TextField 
+          fullWidth 
+          multiline 
+          rows={3} 
+          label="Any other comments or observations (Max 100 words)" 
+          value={suggestions.other} 
+          onChange={e => handleSuggestionChange('other', e.target.value)}
+          helperText={`${getWordCount(suggestions.other)}/100 words`}
+          sx={{ mb: 2 }} 
+        />
       </Box>
 
       <Box sx={{ mt: 2 }}>

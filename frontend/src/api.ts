@@ -13,6 +13,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // For FormData, let axios/browser handle Content-Type with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
@@ -55,18 +59,10 @@ export const feedback = {
 
 export const admin = {
   importData: (type: 'students' | 'faculties-subjects', formData: FormData) => {
-    return api.post(`/api/import/${type}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post(`/api/import/${type}`, formData);
   },
   getSheetNames: (formData: FormData) => {
-    return api.post('/api/import/sheets', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/api/import/sheets', formData);
   },
   getFaculties: (params: { batch: number; course: string; semester?: number }) =>
     api.get('/api/admin/faculties', { params }),

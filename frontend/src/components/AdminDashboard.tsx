@@ -30,10 +30,14 @@ import {
   DialogActions,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { admin } from '../api';
 import DataImport from './DataImport';
+import Footer from './Footer';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface FacultyReport {
   totalStudents: number;
@@ -94,6 +98,9 @@ interface GeneralFeedbackReport {
 }
 
 const AdminDashboard: React.FC = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
   const [tabValue, setTabValue] = useState(0);
   const [reportTab, setReportTab] = useState(0); // 0: Faculty Report, 1: Student Report, 2: General Feedback
   const [portalEnabled, setPortalEnabled] = useState(true);
@@ -137,6 +144,11 @@ const AdminDashboard: React.FC = () => {
 
   const handleReportTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setReportTab(newValue);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/admin/login');
   };
 
   // Load faculties when batch/course/semester changes
@@ -394,7 +406,7 @@ const AdminDashboard: React.FC = () => {
 
     // Add open-ended responses
     doc.setFontSize(12);
-    doc.text('What did you like most about this course?', 14, yPos);
+    doc.text('What did you like most about ____ course?', 14, yPos);
     yPos += 7;
     doc.setFontSize(10);
     const likedText = doc.splitTextToSize(feedback.likedMost, 180);
@@ -417,31 +429,84 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" gutterBottom>
-            Admin Dashboard
-          </Typography>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Feedback Reports" />
-              <Tab label="Import Data" />
-            </Tabs>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#003D7A' }}>
+      <Container maxWidth="lg" sx={{ flex: 1, py: 4 }}>
+        <Paper elevation={0} sx={{ p: 4, mt: 0, background: "linear-gradient(135deg, #003D7A 0%, #0055B3 100%)", color: "white", mb: 4, borderRadius: '12px', boxShadow: '0 4px 20px rgba(0, 61, 122, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, letterSpacing: '0.5px' }}>
+              Admin Dashboard
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.95, fontSize: '16px' }}>
+              Manage feedback reports and system configuration
+            </Typography>
           </Box>
-          {tabValue === 0 && (
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={portalEnabled}
-                  onChange={(e) => setPortalEnabled(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={`Student Portal is ${portalEnabled ? 'Enabled' : 'Disabled'}`}
-            />
-          )}
-        </Box>
+          <Button
+            onClick={handleLogout}
+            variant="contained"
+            size="small"
+            sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '6px',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 4px 12px rgba(255, 255, 255, 0.2)',
+              },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <LogoutIcon sx={{ fontSize: 20 }} />
+            Logout
+          </Button>
+        </Paper>
+
+        <Paper elevation={0} sx={{ p: 4, borderRadius: '12px', backgroundColor: '#FFFFFF', boxShadow: '0 4px 20px rgba(0, 61, 122, 0.1)' }}>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ borderBottom: 2, borderColor: '#E0E0E0', mb: 3 }}>
+              <Tabs 
+                value={tabValue} 
+                onChange={handleTabChange}
+                sx={{
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    color: '#666',
+                    '&.Mui-selected': {
+                      color: '#003D7A',
+                      fontWeight: 600,
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: '#003D7A',
+                    height: '3px',
+                    borderRadius: '2px'
+                  }
+                }}
+              >
+                <Tab label="Feedback Reports" />
+                <Tab label="Import Data" />
+              </Tabs>
+            </Box>
+            {tabValue === 0 && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={portalEnabled}
+                    onChange={(e) => setPortalEnabled(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={`Student Portal is ${portalEnabled ? 'Enabled' : 'Disabled'}`}
+                sx={{ ml: 1 }}
+              />
+            )}
+          </Box>
 
         {/* Feedback Reports Tab */}
         {tabValue === 0 && (
@@ -462,12 +527,22 @@ const AdminDashboard: React.FC = () => {
                   <Button
                     variant={viewMode === 'semester' ? 'contained' : 'outlined'}
                     onClick={() => setViewMode('semester')}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                    }}
                   >
                     Semester View
                   </Button>
                   <Button
                     variant={viewMode === 'faculty' ? 'contained' : 'outlined'}
                     onClick={() => setViewMode('faculty')}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderRadius: '8px',
+                    }}
                   >
                     Faculty-Centric View
                   </Button>
@@ -476,8 +551,8 @@ const AdminDashboard: React.FC = () => {
                 {/* Semester View */}
                 {viewMode === 'semester' && (
                   <>
-                    <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-                      <Typography variant="h6" gutterBottom>
+                    <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 3 }}>
                         Faculty Report Filters
                       </Typography>
                       <Grid container spacing={2}>
@@ -489,6 +564,18 @@ const AdminDashboard: React.FC = () => {
                             value={facultyBatch}
                             onChange={(e) => setFacultyBatch(e.target.value)}
                             placeholder="e.g., 2024"
+                            variant="outlined"
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                '&:hover fieldset': {
+                                  borderColor: '#003D7A',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: '#003D7A',
+                                },
+                              },
+                            }}
                           />
                         </Grid>
                         <Grid item xs={12} md={3}>
@@ -498,6 +585,17 @@ const AdminDashboard: React.FC = () => {
                               value={facultyCourse}
                               label="Course"
                               onChange={(e) => setFacultyCourse(e.target.value)}
+                              sx={{
+                                borderRadius: '8px',
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                },
+                              }}
                             >
                               <MenuItem value="CSE">CSE</MenuItem>
                               <MenuItem value="ECE">ECE</MenuItem>
@@ -513,6 +611,17 @@ const AdminDashboard: React.FC = () => {
                               value={facultySemester}
                               label="Semester (Optional)"
                               onChange={(e) => setFacultySemester(e.target.value)}
+                              sx={{
+                                borderRadius: '8px',
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                },
+                              }}
                             >
                               <MenuItem value="">All Semesters</MenuItem>
                               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -531,6 +640,17 @@ const AdminDashboard: React.FC = () => {
                               label="Faculty (Optional)"
                               onChange={(e) => setSelectedFacultyId(e.target.value)}
                               disabled={availableFaculties.length === 0}
+                              sx={{
+                                borderRadius: '8px',
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                },
+                              }}
                             >
                               <MenuItem value="">All Faculties</MenuItem>
                               {availableFaculties.map((faculty) => (
@@ -548,7 +668,19 @@ const AdminDashboard: React.FC = () => {
                             color="primary"
                             onClick={loadFacultyReport}
                             disabled={loadingFacultyReport}
-                            sx={{ height: '56px' }}
+                            sx={{ 
+                              height: '56px',
+                              background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                              textTransform: 'none',
+                              fontSize: '16px',
+                              fontWeight: 600,
+                              borderRadius: '8px',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 16px rgba(0, 61, 122, 0.3)',
+                              }
+                            }}
                           >
                             {loadingFacultyReport ? 'Loading...' : 'Generate Report'}
                           </Button>
@@ -557,10 +689,10 @@ const AdminDashboard: React.FC = () => {
                     </Paper>
 
                     {facultyReport && (
-                      <Paper elevation={1} sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Paper elevation={0} sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
                           <Box>
-                            <Typography variant="h6">Faculty Report Results</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600, color: '#003D7A' }}>Faculty Report Results</Typography>
                             {selectedFacultyId && (
                               <Typography variant="body2" color="textSecondary">
                                 Faculty: {availableFaculties.find(f => f._id === selectedFacultyId)?.name || 'Unknown'}
@@ -571,35 +703,43 @@ const AdminDashboard: React.FC = () => {
                             variant="contained"
                             color="primary"
                             onClick={downloadFacultyReportPDF}
+                            sx={{
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                            }}
                           >
                             Download PDF
                           </Button>
                         </Box>
                         <Grid container spacing={2} sx={{ mb: 3 }}>
                           <Grid item xs={12} md={3}>
-                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                Total Students in Batch
+                            <Paper sx={{ p: 2.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '12px', textAlign: 'center' }}>
+                              <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
+                                Total Students
                               </Typography>
-                              <Typography variant="h4">{facultyReport.totalStudents}</Typography>
+                              <Typography variant="h4" sx={{ color: '#003D7A', fontWeight: 700 }}>
+                                {facultyReport.totalStudents}
+                              </Typography>
                             </Paper>
                           </Grid>
                           <Grid item xs={12} md={3}>
-                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                              <Typography variant="subtitle2" color="textSecondary">
+                            <Paper sx={{ p: 2.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '12px', textAlign: 'center' }}>
+                              <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                                 Students Filled Form
                               </Typography>
-                              <Typography variant="h4">
+                              <Typography variant="h4" sx={{ color: '#003D7A', fontWeight: 700 }}>
                                 {facultyReport.studentsFilledCount}
                               </Typography>
                             </Paper>
                           </Grid>
                           <Grid item xs={12} md={3}>
-                            <Paper sx={{ p: 2, bgcolor: '#e8f5e9' }}>
-                              <Typography variant="subtitle2" color="textSecondary">
+                            <Paper sx={{ p: 2.5, bgcolor: '#E8F5E9', border: '1px solid #C8E6C9', borderRadius: '12px', textAlign: 'center' }}>
+                              <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                                 Average Score
                               </Typography>
-                              <Typography variant="h4">
+                              <Typography variant="h4" sx={{ color: '#2E7D32', fontWeight: 700 }}>
                                 {facultyReport.averagePercentage}%
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
@@ -608,32 +748,38 @@ const AdminDashboard: React.FC = () => {
                             </Paper>
                           </Grid>
                           <Grid item xs={12} md={3}>
-                            <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                              <Typography variant="subtitle2" color="textSecondary">
+                            <Paper sx={{ p: 2.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '12px', textAlign: 'center' }}>
+                              <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                                 Total Ratings
                               </Typography>
-                              <Typography variant="h4">{facultyReport.totalRatings}</Typography>
+                              <Typography variant="h4" sx={{ color: '#003D7A', fontWeight: 700 }}>
+                                {facultyReport.totalRatings}
+                              </Typography>
                             </Paper>
                           </Grid>
                         </Grid>
 
-                        <TableContainer>
+                        <TableContainer sx={{ borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                           <Table>
                             <TableHead>
-                              <TableRow>
-                                <TableCell>Rating</TableCell>
-                                <TableCell align="right">Count</TableCell>
-                                <TableCell align="right">Percentage</TableCell>
+                              <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                                <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Rating</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Count</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Percentage</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {[1, 2, 3, 4].map((rating) => (
-                                <TableRow key={rating}>
-                                  <TableCell>
+                                <TableRow key={rating} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                                  <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>
                                     {rating} - {rating === 1 ? 'Disagree' : rating === 2 ? 'Partially Agree' : rating === 3 ? 'Agree' : 'Strongly Agree'}
                                   </TableCell>
-                                  <TableCell align="right">{facultyReport.ratingCounts[rating.toString()]}</TableCell>
-                                  <TableCell align="right">{facultyReport.ratingPercentages[rating.toString()]}%</TableCell>
+                                  <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>
+                                    {facultyReport.ratingCounts[rating.toString()]}
+                                  </TableCell>
+                                  <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>
+                                    {facultyReport.ratingPercentages[rating.toString()]}%
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -647,8 +793,8 @@ const AdminDashboard: React.FC = () => {
                 {/* Faculty-Centric View */}
                 {viewMode === 'faculty' && (
                   <>
-                    <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-                      <Typography variant="h6" gutterBottom>
+                    <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 3 }}>
                         Faculty-Centric Report Filters
                       </Typography>
                       <Grid container spacing={2}>
@@ -659,6 +805,17 @@ const AdminDashboard: React.FC = () => {
                               value={facultyCentricCourse}
                               label="Course"
                               onChange={(e) => setFacultyCentricCourse(e.target.value)}
+                              sx={{
+                                borderRadius: '8px',
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                },
+                              }}
                             >
                               <MenuItem value="CSE">CSE</MenuItem>
                               <MenuItem value="ECE">ECE</MenuItem>
@@ -674,6 +831,17 @@ const AdminDashboard: React.FC = () => {
                               value={facultyCentricSemester}
                               label="Semester (Optional)"
                               onChange={(e) => setFacultyCentricSemester(e.target.value)}
+                              sx={{
+                                borderRadius: '8px',
+                                '& .MuiOutlinedInput-root': {
+                                  '&:hover fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#003D7A',
+                                  },
+                                },
+                              }}
                             >
                               <MenuItem value="">All Semesters</MenuItem>
                               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -691,7 +859,19 @@ const AdminDashboard: React.FC = () => {
                             color="primary"
                             onClick={loadFacultyBatchReport}
                             disabled={loadingFacultyBatchReport}
-                            sx={{ height: '56px' }}
+                            sx={{ 
+                              height: '56px',
+                              background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                              textTransform: 'none',
+                              fontSize: '16px',
+                              fontWeight: 600,
+                              borderRadius: '8px',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 16px rgba(0, 61, 122, 0.3)',
+                              }
+                            }}
                           >
                             {loadingFacultyBatchReport ? 'Loading...' : 'Generate Faculty-Centric Report'}
                           </Button>
@@ -700,8 +880,8 @@ const AdminDashboard: React.FC = () => {
                     </Paper>
 
                     {facultyBatchReports.length > 0 && (
-                      <Paper elevation={1} sx={{ p: 3 }}>
-                        <Typography variant="h6" gutterBottom>
+                      <Paper elevation={0} sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 1 }}>
                           Faculty Reports ({facultyBatchReports.length} Faculties)
                         </Typography>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -715,11 +895,27 @@ const AdminDashboard: React.FC = () => {
                             onChange={() => setExpandedFaculty(
                               expandedFaculty === facultyReport.facultyId ? false : facultyReport.facultyId
                             )}
-                            sx={{ mb: 2 }}
+                            sx={{ 
+                              mb: 2,
+                              backgroundColor: '#F8FAFC',
+                              border: '1px solid #E8EEF5',
+                              borderRadius: '8px',
+                              '&.Mui-expanded': {
+                                backgroundColor: '#FFFFFF',
+                              },
+                              boxShadow: 'none',
+                            }}
                           >
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <AccordionSummary 
+                              expandIcon={<ExpandMoreIcon />}
+                              sx={{
+                                '& .MuiAccordionSummary-content': {
+                                  margin: '16px 0',
+                                }
+                              }}
+                            >
                               <Box sx={{ flexGrow: 1 }}>
-                                <Typography variant="h6">{facultyReport.facultyName}</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600, color: '#003D7A' }}>{facultyReport.facultyName}</Typography>
                                 <Typography variant="body2" color="textSecondary">
                                   {facultyReport.email} | {facultyReport.batches.length} Batch(es)
                                 </Typography>
@@ -727,69 +923,73 @@ const AdminDashboard: React.FC = () => {
                             </AccordionSummary>
                             <AccordionDetails>
                               {facultyReport.batches.map((batchData) => (
-                                <Paper key={batchData.batch} sx={{ p: 2, mb: 2, bgcolor: '#f9f9f9' }}>
-                                  <Typography variant="h6" gutterBottom>
+                                <Paper key={batchData.batch} sx={{ p: 2.5, mb: 2, bgcolor: '#FFFFFF', border: '1px solid #E8EEF5', borderRadius: '8px' }}>
+                                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A' }}>
                                     Batch {batchData.batch}
                                   </Typography>
                                   
                                   <Grid container spacing={2} sx={{ mb: 2 }}>
                                     <Grid item xs={6} md={3}>
-                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
-                                        <Typography variant="caption" color="textSecondary">
+                                      <Paper sx={{ p: 1.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '8px', textAlign: 'center' }}>
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, display: 'block', mb: 0.5 }}>
                                           Total Students
                                         </Typography>
-                                        <Typography variant="h5">{batchData.totalStudents}</Typography>
+                                        <Typography variant="h5" sx={{ color: '#003D7A', fontWeight: 700 }}>{batchData.totalStudents}</Typography>
                                       </Paper>
                                     </Grid>
                                     <Grid item xs={6} md={3}>
-                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
-                                        <Typography variant="caption" color="textSecondary">
+                                      <Paper sx={{ p: 1.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '8px', textAlign: 'center' }}>
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, display: 'block', mb: 0.5 }}>
                                           Students Filled
                                         </Typography>
-                                        <Typography variant="h5">{batchData.studentsFilledCount}</Typography>
-                                        <Typography variant="caption">
+                                        <Typography variant="h5" sx={{ color: '#003D7A', fontWeight: 700 }}>{batchData.studentsFilledCount}</Typography>
+                                        <Typography variant="caption" sx={{ color: '#666' }}>
                                           ({batchData.studentsFilledPercentage}%)
                                         </Typography>
                                       </Paper>
                                     </Grid>
                                     <Grid item xs={6} md={3}>
-                                      <Paper sx={{ p: 1.5, bgcolor: '#e8f5e9' }}>
-                                        <Typography variant="caption" color="textSecondary">
+                                      <Paper sx={{ p: 1.5, bgcolor: '#E8F5E9', border: '1px solid #C8E6C9', borderRadius: '8px', textAlign: 'center' }}>
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, display: 'block', mb: 0.5 }}>
                                           Average Score
                                         </Typography>
-                                        <Typography variant="h5">{batchData.averagePercentage}%</Typography>
-                                        <Typography variant="caption">
+                                        <Typography variant="h5" sx={{ color: '#2E7D32', fontWeight: 700 }}>{batchData.averagePercentage}%</Typography>
+                                        <Typography variant="caption" sx={{ color: '#2E7D32' }}>
                                           {batchData.averageRating}/4
                                         </Typography>
                                       </Paper>
                                     </Grid>
                                     <Grid item xs={6} md={3}>
-                                      <Paper sx={{ p: 1.5, bgcolor: '#fff' }}>
-                                        <Typography variant="caption" color="textSecondary">
+                                      <Paper sx={{ p: 1.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '8px', textAlign: 'center' }}>
+                                        <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, display: 'block', mb: 0.5 }}>
                                           Total Ratings
                                         </Typography>
-                                        <Typography variant="h5">{batchData.totalRatings}</Typography>
+                                        <Typography variant="h5" sx={{ color: '#003D7A', fontWeight: 700 }}>{batchData.totalRatings}</Typography>
                                       </Paper>
                                     </Grid>
                                   </Grid>
 
-                                  <TableContainer>
+                                  <TableContainer sx={{ borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                                     <Table size="small">
                                       <TableHead>
-                                        <TableRow>
-                                          <TableCell>Rating</TableCell>
-                                          <TableCell align="right">Count</TableCell>
-                                          <TableCell align="right">Percentage</TableCell>
+                                        <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                                          <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Rating</TableCell>
+                                          <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Count</TableCell>
+                                          <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Percentage</TableCell>
                                         </TableRow>
                                       </TableHead>
                                       <TableBody>
                                         {[1, 2, 3, 4].map((rating) => (
-                                          <TableRow key={rating}>
-                                            <TableCell>
+                                          <TableRow key={rating} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                                            <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>
                                               {rating} - {rating === 1 ? 'Disagree' : rating === 2 ? 'Partially Agree' : rating === 3 ? 'Agree' : 'Strongly Agree'}
                                             </TableCell>
-                                            <TableCell align="right">{batchData.ratingCounts[rating.toString()]}</TableCell>
-                                            <TableCell align="right">{batchData.ratingPercentages[rating.toString()]}%</TableCell>
+                                            <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>
+                                              {batchData.ratingCounts[rating.toString()]}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>
+                                              {batchData.ratingPercentages[rating.toString()]}%
+                                            </TableCell>
                                           </TableRow>
                                         ))}
                                       </TableBody>
@@ -810,8 +1010,8 @@ const AdminDashboard: React.FC = () => {
             {/* Student Report Panel */}
             {reportTab === 1 && (
               <Box>
-                <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 3 }}>
                     Student Report Filters
                   </Typography>
                   <Grid container spacing={2}>
@@ -823,6 +1023,17 @@ const AdminDashboard: React.FC = () => {
                         value={studentBatch}
                         onChange={(e) => setStudentBatch(e.target.value)}
                         placeholder="e.g., 2024"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '8px',
+                            '&:hover fieldset': {
+                              borderColor: '#003D7A',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#003D7A',
+                            },
+                          },
+                        }}
                       />
                     </Grid>
                     <Grid item xs={12} md={4}>
@@ -832,6 +1043,17 @@ const AdminDashboard: React.FC = () => {
                           value={studentCourse}
                           label="Course"
                           onChange={(e) => setStudentCourse(e.target.value)}
+                          sx={{
+                            borderRadius: '8px',
+                            '& .MuiOutlinedInput-root': {
+                              '&:hover fieldset': {
+                                borderColor: '#003D7A',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#003D7A',
+                              },
+                            },
+                          }}
                         >
                           <MenuItem value="CSE">CSE</MenuItem>
                           <MenuItem value="ECE">ECE</MenuItem>
@@ -847,7 +1069,19 @@ const AdminDashboard: React.FC = () => {
                         color="primary"
                         onClick={loadStudentReport}
                         disabled={loadingStudentReport}
-                        sx={{ height: '56px' }}
+                        sx={{ 
+                          height: '56px',
+                          background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                          textTransform: 'none',
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          borderRadius: '8px',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 16px rgba(0, 61, 122, 0.3)',
+                          }
+                        }}
                       >
                         {loadingStudentReport ? 'Loading...' : 'Generate Report'}
                       </Button>
@@ -856,25 +1090,25 @@ const AdminDashboard: React.FC = () => {
                 </Paper>
 
                 {studentReport.length > 0 && (
-                  <Paper elevation={1} sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
+                  <Paper elevation={0} sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 2 }}>
                       Students Who Filled Feedback ({studentReport.length})
                     </Typography>
-                    <TableContainer>
+                    <TableContainer sx={{ borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                       <Table>
                         <TableHead>
-                          <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Enrollment No</TableCell>
-                            <TableCell>Actions</TableCell>
+                          <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Name</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Enrollment No</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Actions</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {studentReport.map((student) => (
-                            <TableRow key={student.studentId}>
-                              <TableCell>{student.name}</TableCell>
-                              <TableCell>{student.enrollmentNo}</TableCell>
-                              <TableCell>
+                            <TableRow key={student.studentId} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{student.name}</TableCell>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{student.enrollmentNo}</TableCell>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>
                                 <Button
                                   size="small"
                                   variant="outlined"
@@ -882,7 +1116,17 @@ const AdminDashboard: React.FC = () => {
                                     setSelectedStudent(student);
                                     setStudentDialogOpen(true);
                                   }}
-                                  sx={{ mr: 1 }}
+                                  sx={{ 
+                                    mr: 1,
+                                    textTransform: 'none',
+                                    borderColor: '#003D7A',
+                                    color: '#003D7A',
+                                    borderRadius: '6px',
+                                    '&:hover': {
+                                      borderColor: '#0055B3',
+                                      backgroundColor: 'rgba(0, 61, 122, 0.04)',
+                                    }
+                                  }}
                                 >
                                   View Details
                                 </Button>
@@ -890,6 +1134,12 @@ const AdminDashboard: React.FC = () => {
                                   size="small"
                                   variant="contained"
                                   onClick={() => downloadStudentReportPDF(student)}
+                                  sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    borderRadius: '6px',
+                                    background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                                  }}
                                 >
                                   Download PDF
                                 </Button>
@@ -907,8 +1157,8 @@ const AdminDashboard: React.FC = () => {
             {/* General Feedback Report Panel */}
             {reportTab === 2 && (
               <Box>
-                <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 3 }}>
                     General Feedback Report Filters
                   </Typography>
                   <Grid container spacing={2}>
@@ -920,6 +1170,17 @@ const AdminDashboard: React.FC = () => {
                         value={generalBatch}
                         onChange={(e) => setGeneralBatch(e.target.value)}
                         placeholder="e.g., 2024"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '8px',
+                            '&:hover fieldset': {
+                              borderColor: '#003D7A',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#003D7A',
+                            },
+                          },
+                        }}
                       />
                     </Grid>
                     <Grid item xs={12} md={4}>
@@ -929,6 +1190,17 @@ const AdminDashboard: React.FC = () => {
                           value={generalCourse}
                           label="Course"
                           onChange={(e) => setGeneralCourse(e.target.value)}
+                          sx={{
+                            borderRadius: '8px',
+                            '& .MuiOutlinedInput-root': {
+                              '&:hover fieldset': {
+                                borderColor: '#003D7A',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#003D7A',
+                              },
+                            },
+                          }}
                         >
                           <MenuItem value="CSE">CSE</MenuItem>
                           <MenuItem value="ECE">ECE</MenuItem>
@@ -944,7 +1216,19 @@ const AdminDashboard: React.FC = () => {
                         color="primary"
                         onClick={loadGeneralFeedbackReport}
                         disabled={loadingGeneralReport}
-                        sx={{ height: '56px' }}
+                        sx={{ 
+                          height: '56px',
+                          background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                          textTransform: 'none',
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          borderRadius: '8px',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 16px rgba(0, 61, 122, 0.3)',
+                          }
+                        }}
                       >
                         {loadingGeneralReport ? 'Loading...' : 'Generate Report'}
                       </Button>
@@ -953,56 +1237,58 @@ const AdminDashboard: React.FC = () => {
                 </Paper>
 
                 {generalReport && (
-                  <Paper elevation={1} sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
+                  <Paper elevation={0} sx={{ p: 3, backgroundColor: '#FFFFFF', border: '1px solid #E8EEF5', borderRadius: '12px' }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A', mb: 3 }}>
                       General Feedback Report Results
                     </Typography>
                     <Grid container spacing={2} sx={{ mb: 3 }}>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
+                        <Paper sx={{ p: 2.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '12px', textAlign: 'center' }}>
+                          <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                             Total Students in Batch
                           </Typography>
-                          <Typography variant="h4">{generalReport.totalStudents}</Typography>
+                          <Typography variant="h4" sx={{ color: '#003D7A', fontWeight: 700 }}>
+                            {generalReport.totalStudents}
+                          </Typography>
                         </Paper>
                       </Grid>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
+                        <Paper sx={{ p: 2.5, bgcolor: '#F0F4FF', border: '1px solid #E0E8F5', borderRadius: '12px', textAlign: 'center' }}>
+                          <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                             Students Filled Form
                           </Typography>
-                          <Typography variant="h4">
+                          <Typography variant="h4" sx={{ color: '#003D7A', fontWeight: 700 }}>
                             {generalReport.studentsFilledCount}
                           </Typography>
                         </Paper>
                       </Grid>
                       <Grid item xs={12} md={4}>
-                        <Paper sx={{ p: 2, bgcolor: '#e8f5e9' }}>
-                          <Typography variant="subtitle2" color="textSecondary">
+                        <Paper sx={{ p: 2.5, bgcolor: '#E8F5E9', border: '1px solid #C8E6C9', borderRadius: '12px', textAlign: 'center' }}>
+                          <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 500, mb: 1 }}>
                             Completion Rate
                           </Typography>
-                          <Typography variant="h4">
+                          <Typography variant="h4" sx={{ color: '#2E7D32', fontWeight: 700 }}>
                             {generalReport.studentsFilledPercentage}%
                           </Typography>
                         </Paper>
                       </Grid>
                     </Grid>
 
-                    <TableContainer>
+                    <TableContainer sx={{ borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                       <Table>
                         <TableHead>
-                          <TableRow>
-                            <TableCell>Student Name</TableCell>
-                            <TableCell>Enrollment No</TableCell>
-                            <TableCell>Actions</TableCell>
+                          <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Student Name</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Enrollment No</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Actions</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {generalReport.feedbackDetails.map((feedback, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{feedback.studentName}</TableCell>
-                              <TableCell>{feedback.enrollmentNo}</TableCell>
-                              <TableCell>
+                            <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{feedback.studentName}</TableCell>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{feedback.enrollmentNo}</TableCell>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>
                                 <Button
                                   size="small"
                                   variant="outlined"
@@ -1010,7 +1296,17 @@ const AdminDashboard: React.FC = () => {
                                     setSelectedGeneralFeedback(feedback);
                                     setGeneralDialogOpen(true);
                                   }}
-                                  sx={{ mr: 1 }}
+                                  sx={{ 
+                                    mr: 1,
+                                    textTransform: 'none',
+                                    borderColor: '#003D7A',
+                                    color: '#003D7A',
+                                    borderRadius: '6px',
+                                    '&:hover': {
+                                      borderColor: '#0055B3',
+                                      backgroundColor: 'rgba(0, 61, 122, 0.04)',
+                                    }
+                                  }}
                                 >
                                   View Details
                                 </Button>
@@ -1018,6 +1314,12 @@ const AdminDashboard: React.FC = () => {
                                   size="small"
                                   variant="contained"
                                   onClick={() => downloadGeneralFeedbackPDF(feedback)}
+                                  sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    borderRadius: '6px',
+                                    background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+                                  }}
                                 >
                                   Download PDF
                                 </Button>
@@ -1041,6 +1343,7 @@ const AdminDashboard: React.FC = () => {
           </Box>
         )}
       </Paper>
+      </Container>
 
       {/* Student Details Dialog */}
       <Dialog
@@ -1049,34 +1352,34 @@ const AdminDashboard: React.FC = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#003D7A' }}>
           Feedback Details - {selectedStudent?.name} ({selectedStudent?.enrollmentNo})
         </DialogTitle>
         <DialogContent>
           {selectedStudent && (
             <Box>
               {selectedStudent.facultyFeedback.map((faculty, index) => (
-                <Accordion key={index} defaultExpanded={index === 0}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6">{faculty.facultyName}</Typography>
+                <Accordion key={index} defaultExpanded={index === 0} sx={{ boxShadow: 'none', border: '1px solid #E8EEF5', mb: 1 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#F8FAFC' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#003D7A' }}>{faculty.facultyName}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Typography variant="subtitle2" gutterBottom>
+                    <Typography variant="subtitle2" gutterBottom sx={{ color: '#666', fontWeight: 500 }}>
                       Subjects: {faculty.subjects.map(s => s.subjectName).join(', ')}
                     </Typography>
-                    <TableContainer sx={{ mt: 2 }}>
+                    <TableContainer sx={{ mt: 2, borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow>
-                            <TableCell>Question</TableCell>
-                            <TableCell align="right">Rating</TableCell>
+                          <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                            <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Question</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Rating</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {faculty.ratings.map((rating, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{rating.question}</TableCell>
-                              <TableCell align="right">{rating.rating}</TableCell>
+                            <TableRow key={idx} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                              <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{rating.question}</TableCell>
+                              <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>{rating.rating}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1088,14 +1391,22 @@ const AdminDashboard: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setStudentDialogOpen(false)}>Close</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setStudentDialogOpen(false)} sx={{ textTransform: 'none', fontWeight: 600 }}>
+            Close
+          </Button>
           {selectedStudent && (
             <Button
               variant="contained"
               onClick={() => {
                 downloadStudentReportPDF(selectedStudent);
                 setStudentDialogOpen(false);
+              }}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
               }}
             >
               Download PDF
@@ -1111,7 +1422,7 @@ const AdminDashboard: React.FC = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600, color: '#003D7A' }}>
           General Feedback Details - {selectedGeneralFeedback?.studentName} ({selectedGeneralFeedback?.enrollmentNo})
         </DialogTitle>
         <DialogContent>
@@ -1120,22 +1431,22 @@ const AdminDashboard: React.FC = () => {
               {/* Ratings Section */}
               {selectedGeneralFeedback.answers && selectedGeneralFeedback.answers.length > 0 && (
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A' }}>
                     Ratings
                   </Typography>
-                  <TableContainer>
+                  <TableContainer sx={{ borderRadius: '8px', border: '1px solid #E0E0E0' }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow>
-                          <TableCell>Question</TableCell>
-                          <TableCell align="right">Rating</TableCell>
+                        <TableRow sx={{ backgroundColor: '#F0F4FF' }}>
+                          <TableCell sx={{ fontWeight: 600, color: '#003D7A' }}>Question</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600, color: '#003D7A' }}>Rating</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {selectedGeneralFeedback.answers.map((answer, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>{answer.question}</TableCell>
-                            <TableCell align="right">{answer.rating}</TableCell>
+                          <TableRow key={idx} sx={{ '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                            <TableCell sx={{ borderBottom: '1px solid #E8EEF5' }}>{answer.question}</TableCell>
+                            <TableCell align="right" sx={{ borderBottom: '1px solid #E8EEF5', fontWeight: 500 }}>{answer.rating}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1146,22 +1457,22 @@ const AdminDashboard: React.FC = () => {
 
               {/* Open-Ended Responses Section */}
               <Box sx={{ mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  What did you like most about this course?
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A' }}>
+                  What did you like most about ____ course?
                 </Typography>
-                <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                  <Typography variant="body1">
+                <Paper sx={{ p: 2, bgcolor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '8px' }}>
+                  <Typography variant="body1" sx={{ color: '#333' }}>
                     {selectedGeneralFeedback.likedMost}
                   </Typography>
                 </Paper>
               </Box>
 
               <Box>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#003D7A' }}>
                   What improvements would you suggest?
                 </Typography>
-                <Paper sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                  <Typography variant="body1">
+                <Paper sx={{ p: 2, bgcolor: '#F8FAFC', border: '1px solid #E8EEF5', borderRadius: '8px' }}>
+                  <Typography variant="body1" sx={{ color: '#333' }}>
                     {selectedGeneralFeedback.improvements}
                   </Typography>
                 </Paper>
@@ -1169,8 +1480,10 @@ const AdminDashboard: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGeneralDialogOpen(false)}>Close</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setGeneralDialogOpen(false)} sx={{ textTransform: 'none', fontWeight: 600 }}>
+            Close
+          </Button>
           {selectedGeneralFeedback && (
             <Button
               variant="contained"
@@ -1178,14 +1491,24 @@ const AdminDashboard: React.FC = () => {
                 downloadGeneralFeedbackPDF(selectedGeneralFeedback);
                 setGeneralDialogOpen(false);
               }}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #003D7A 0%, #0055B3 100%)',
+              }}
             >
               Download PDF
             </Button>
           )}
         </DialogActions>
       </Dialog>
-    </Container>
+
+      <Footer />
+    </Box>
   );
 };
 
 export default AdminDashboard;
+
+

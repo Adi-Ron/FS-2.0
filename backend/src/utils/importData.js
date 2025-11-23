@@ -128,19 +128,25 @@ async function importStudents(filePath, batch, course, sheetName = null) {
       
       try {
         // Try multiple variations of enrollment number column names
-        const enrollmentNo = getValue(row, 'ENROLLMENT NO') || 
-                            getValue(row, 'ENROLLMENT NUMBER') || 
-                            getValue(row, 'ENROLLMENT') ||
-                            getValue(row, 'ENROLLMENTNO');
+        // Support both American (ENROLLMENT) and British (ENROLMENT) spellings
+        let enrollmentNo = getValue(row, 'ENROLLMENT NO') || 
+                          getValue(row, 'ENROLMENT NO') ||
+                          getValue(row, 'ENROLMENT NUMBER') ||
+                          getValue(row, 'ENROLLMENT NUMBER') || 
+                          getValue(row, 'ENROLLMENT') ||
+                          getValue(row, 'ENROLMENT') ||
+                          getValue(row, 'ENROLLMENTNO') ||
+                          getValue(row, 'ENROLMENTNO');
         if (!enrollmentNo) {
           skipped++;
           continue;
         }
 
         // Try multiple variations of student name column names
-        const name = getValue(row, 'STUDENT NAME') || 
-                    getValue(row, 'NAME') || 
-                    getValue(row, 'STUDENTNAME');
+        let name = getValue(row, 'STUDENT NAME') || 
+                  getValue(row, 'STUDENT') ||
+                  getValue(row, 'NAME') || 
+                  getValue(row, 'STUDENTNAME');
         if (!name) {
           errors++;
           continue;

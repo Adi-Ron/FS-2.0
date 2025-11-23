@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Container,
   Paper,
@@ -67,42 +67,42 @@ const StudentDashboard: React.FC = () => {
     }
   }, [selectedSubject]);
 
-  const loadSubjects = async () => {
+  const loadSubjects = useCallback(async () => {
     try {
       const response = await subjects.getAll();
       setAvailableSubjects(response.data);
     } catch (error) {
       console.error('Failed to load subjects:', error);
     }
-  };
+  }, []);
 
-  const loadFaculty = async (subjectId: string) => {
+  const loadFaculty = useCallback(async (subjectId: string) => {
     try {
       const response = await faculty.getBySubject(subjectId);
       setAvailableFaculty(response.data);
     } catch (error) {
       console.error('Failed to load faculty:', error);
     }
-  };
+  }, []);
 
-  const handleSubjectChange = (event: any) => {
+  const handleSubjectChange = useCallback((event: any) => {
     setSelectedSubject(event.target.value);
     setSelectedFaculty('');
     setRatings({});
-  };
+  }, []);
 
-  const handleFacultyChange = (event: any) => {
+  const handleFacultyChange = useCallback((event: any) => {
     setSelectedFaculty(event.target.value);
     setRatings({});
-  };
+  }, []);
 
-  const handleRatingChange = (questionId: number, value: number | null) => {
+  const handleRatingChange = useCallback((questionId: number, value: number | null) => {
     if (value !== null) {
       setRatings(prev => ({ ...prev, [questionId]: value }));
     }
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     try {
       const feedbackData = {
         subjectId: selectedSubject,
@@ -121,9 +121,9 @@ const StudentDashboard: React.FC = () => {
     } catch (error) {
       console.error('Failed to submit feedback:', error);
     }
-  };
+  }, [selectedSubject, selectedFaculty, ratings]);
 
-  const handleNotApplicable = async () => {
+  const handleNotApplicable = useCallback(async () => {
     try {
       const feedbackData = {
         subjectId: selectedSubject,
@@ -134,7 +134,7 @@ const StudentDashboard: React.FC = () => {
     } catch (error) {
       console.error('Failed to mark as not applicable:', error);
     }
-  };
+  }, [selectedSubject]);
 
   if (showSemesterSelection) {
     return <SemesterSelection onComplete={() => setShowSemesterSelection(false)} />;

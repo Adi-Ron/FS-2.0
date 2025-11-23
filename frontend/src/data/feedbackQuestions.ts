@@ -31,6 +31,6 @@ export const feedbackQuestions = [
 ];
 
 export const openFeedbackFields = [
-  { id: 'likedMost', label: 'What did you like most about this course?' },
-  { id: 'improvements', label: 'What improvements would you suggest?' }
+  { id: 'likedMost', label: 'What did you like most about ____ course? (Max 100 words)', placeholder: 'Your feedback here' },
+  { id: 'improvements', label: 'What improvements would you suggest? (Max 100 words)', placeholder: 'Your suggestions here' }
 ];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Box, Typography, Paper, Button, MenuItem, Select, TextField, FormControl, InputLabel } from '@mui/material';
 import { feedbackQuestions, ratingScale, openFeedbackFields } from '../data/feedbackQuestions';
 import { semesterSubjects } from '../data/feedbackSubjects';
@@ -17,18 +17,28 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ semester, subjectIndex, onS
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
   const [openFeedback, setOpenFeedback] = useState<{ [key: string]: string }>({});
 
-  const handleFacultyChange = (e: any) => {
+  const handleFacultyChange = useCallback((e: any) => {
     setFaculty(e.target.value);
     setNotApplicable(e.target.value === 'Not Applicable');
-  };
+  }, []);
 
-  const handleRatingChange = (qid: number, value: number) => {
+  const handleRatingChange = useCallback((qid: number, value: number) => {
     setAnswers(prev => ({ ...prev, [qid]: value }));
-  };
+  }, []);
 
-  const handleOpenFeedbackChange = (field: string, value: string) => {
-    setOpenFeedback(prev => ({ ...prev, [field]: value }));
-  };
+  const handleOpenFeedbackChange = useCallback((field: string, value: string) => {
+    // Count words (split by whitespace and filter out empty strings)
+    const wordCount = value.trim().split(/\s+/).filter(word => word.length > 0).length;
+    // Only update if within 100 words limit
+    if (wordCount <= 100 || value.length < (openFeedback[field]?.length || 0)) {
+      setOpenFeedback(prev => ({ ...prev, [field]: value }));
+    }
+  }, [openFeedback]);
+
+  const getWordCount = useCallback((text: string) => {
+    if (!text || text.trim().length === 0) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,16 +100,18 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ semester, subjectIndex, onS
           </Box>
         )}
         {openFeedbackFields.map(field => (
-          <TextField
-            key={field.id}
-            label={field.label}
-            fullWidth
-            multiline
-            rows={2}
-            sx={{ mb: 2 }}
-            value={openFeedback[field.id] || ''}
-            onChange={e => handleOpenFeedbackChange(field.id, e.target.value)}
-          />
+          <Box key={field.id} sx={{ mb: 2 }}>
+            <TextField
+              label={field.label}
+              placeholder={field.placeholder}
+              fullWidth
+              multiline
+              rows={3}
+              value={openFeedback[field.id] || ''}
+              onChange={e => handleOpenFeedbackChange(field.id, e.target.value)}
+              helperText={`${getWordCount(openFeedback[field.id] || '')}/100 words`}
+            />
+          </Box>
         ))}
         <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
           Submit Feedback
